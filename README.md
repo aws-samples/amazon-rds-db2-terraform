@@ -1,11 +1,5 @@
-## My Project
-
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+## Deploying Amazon RDS for Db2 using Terraform
+This is a terraform script to deploy Amazon RDS for Db2.
 
 ## Security
 
