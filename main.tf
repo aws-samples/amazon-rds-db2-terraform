@@ -132,7 +132,7 @@ resource "aws_kms_key_policy" "key_rds_db2_policy" {
 }
 
 # Define the AWS RDS DB instance resource
-resource "aws_db_instance" "this" {
+resource "aws_db_instance" "rdsdb2" {
   identifier             = var.identifier  # Name of the RDS instance
   engine                 = var.db_engine      # Database engine, e.g., "db2-se, db2-ae"
   engine_version         = var.db_engine_version # Version of the DB engine
@@ -245,7 +245,7 @@ resource "aws_iam_role_policy_attachment" "rds_s3_policy_attachment" {
 
 # Associate the IAM role with the RDS instance for S3 integration
 resource "aws_db_instance_role_association" "example" {
-  db_instance_identifier = aws_db_instance.this.identifier
+  db_instance_identifier = aws_db_instance.rdsdb2.identifier
   feature_name           = "S3_INTEGRATION"
   role_arn               = aws_iam_role.rds_db2_s3_access_role.arn
 }
@@ -288,12 +288,12 @@ resource "aws_sns_topic_subscription" "rds_db2_topic_subscription" {
 
 # RDS Event subscription for database events 
 resource "aws_db_event_subscription" "rds_events_subscription" {
-  depends_on = [aws_db_instance.this]
+  depends_on = [aws_db_instance.rdsdb2]
   name      = "rds-events-subscription"
   sns_topic = aws_sns_topic.rds_db2_sns_topic.arn
 
   source_type = "db-instance"
-  source_ids  = [aws_db_instance.this.identifier]
+  source_ids  = [aws_db_instance.rdsdb2.identifier]
 
   event_categories = [
     "availability",
@@ -339,7 +339,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_high_cpu" {
   ok_actions                = [aws_sns_topic.rds_db2_sns_topic.arn]
   treat_missing_data        = "breaching"
   dimensions = {
-    DBInstanceIdentifier = aws_db_instance.this.identifier
+    DBInstanceIdentifier = aws_db_instance.rdsdb2.identifier
   }
 }
 
@@ -347,11 +347,11 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_high_cpu" {
 resource "aws_cloudwatch_log_metric_filter" "rds_db2_severe_log_filter" {
   name           = "rds-db2-severe-log-filter"
   pattern        = "\"LEVEL: Severe\""
-  log_group_name = "/aws/rds/instance/${aws_db_instance.this.identifier}/diag.log"
+  log_group_name = "/aws/rds/instance/${aws_db_instance.rdsdb2.identifier}/diag.log"
 
   metric_transformation {
     name      = "RDS-DB2-Severe-Log-Count"
-    namespace = aws_db_instance.this.identifier
+    namespace = aws_db_instance.rdsdb2.identifier
     value     = "1"
   }
 }
@@ -362,7 +362,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_severe_log_alarm" {
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = "1"
   metric_name               = "RDS-DB2-Severe-Log-Count"
-  namespace                 =  aws_db_instance.this.identifier
+  namespace                 =  aws_db_instance.rdsdb2.identifier
   period                    = "60"
   statistic                 = "Sum"
   threshold                 = "1"
@@ -375,11 +375,11 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_severe_log_alarm" {
 # Outputs to display key information after deployment
 output "db_instance_endpoint" {
   description = "The connection endpoint"
-  value       = try(aws_db_instance.this.endpoint, null)
+  value       = try(aws_db_instance.rdsdb2.endpoint, null)
 }
 
 output "db_instance_master_user_secret_arn" {
   description = "The ARN of the master user secret"
-  value       = try(aws_db_instance.this.master_user_secret[0].secret_arn, null)
+  value       = try(aws_db_instance.rdsdb2.master_user_secret[0].secret_arn, null)
 }
 
