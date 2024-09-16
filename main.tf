@@ -37,7 +37,7 @@ resource "aws_db_parameter_group" "db2_param_group" {
 
 # Define the Db2 option group
 resource "aws_db_option_group" "Db2_option_group" {
-  name                     = "rds-db2-database-option-group"
+  name                     = "rds-db2-terraform-option-group"
   engine_name              = var.db_engine
   major_engine_version     = var.major_engine_version
   option_group_description = "Option group for Db2 RDS databases"
@@ -48,7 +48,7 @@ resource "aws_db_option_group" "Db2_option_group" {
 
 # Create a security group 
 resource "aws_security_group" "db2_sg" {
-  name_prefix = "db2-sg-" # Prefix for the security group name
+  name_prefix = "rds-db2-terraform-sg-" # Prefix for the security group name
   description = "Security group for DB2 RDS instance"
   vpc_id      = var.vpc_id # VPC ID where the security group is created
 
@@ -84,7 +84,7 @@ resource "aws_security_group" "db2_sg" {
 
 # Define the database subnet group
 resource "aws_db_subnet_group" "db2_subnet_group" {
-  name       = "rds-db2-database-subnet-group"
+  name       = "rds-db2-terraform-database-subnet-group"
   subnet_ids = var.subnet_ids # List of subnet IDs for the DB instance
 
   tags = {
@@ -94,6 +94,7 @@ resource "aws_db_subnet_group" "db2_subnet_group" {
 
 # Create a KMS key for encrypting storage and master user's password on the RDS instance
 resource "aws_kms_key" "key_rds_db2" {
+  description             = "RDS Db2 Terraform KMS Key"
   key_usage               = "ENCRYPT_DECRYPT" # Symmetric Encryption KMS Key
   enable_key_rotation     = true # Automatic key rotation
   rotation_period_in_days = 180
@@ -101,35 +102,54 @@ resource "aws_kms_key" "key_rds_db2" {
   tags                    = var.tags
 }
 
-# Define the KMS key policy for the RDS KMS key and grant permissions to user
+# # Define the KMS key policy for the RDS KMS key and grant permissions to user
 resource "aws_kms_key_policy" "key_rds_db2_policy" {
   key_id = aws_kms_key.key_rds_db2.id
-
   policy = jsonencode({
     Version = "2012-10-17"
     Id      = "key-default-1"
     Statement = [
       {
-        Sid    = "Give all permissions on key to root account"
+        Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
         },
         Action   = "kms:*"
-        Resource = aws_kms_key.key_rds_db2.arn
-      },
-      {
-        Sid    = "Allow use of the key"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:${data.aws_caller_identity.current.user_id}"
-        },
-        Action   = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey", "kms:GenerateDataKeyWithoutPlaintext"]
-        Resource = aws_kms_key.key_rds_db2.arn
+        Resource = "*"
       }
     ]
   })
 }
+
+# # Define the KMS key policy for the RDS KMS key and grant permissions to user
+# resource "aws_kms_key_policy" "key_rds_db2_policy" {
+#   key_id = aws_kms_key.key_rds_db2.id
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Id      = "key-default-1"
+#     Statement = [
+#       {
+#         Sid    = "Give all permissions on key to root account"
+#         Effect = "Allow"
+#         Principal = {
+#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+#         },
+#         Action   = "kms:*"
+#         Resource = aws_kms_key.key_rds_db2.arn
+#       },
+#       {
+#         Sid    = "Allow use of the key"
+#         Effect = "Allow"
+#         Principal = {
+#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:${data.aws_caller_identity.current.user_id}"
+#         },
+#         Action   = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey", "kms:GenerateDataKeyWithoutPlaintext"]
+#         Resource = aws_kms_key.key_rds_db2.arn
+#       }
+#     ]
+#   })
+# }
 
 # Define the AWS RDS DB instance resource
 resource "aws_db_instance" "rdsdb2" {
@@ -266,7 +286,7 @@ data "aws_iam_policy_document" "rds_monitoring_role_assume_role_policy" {
 # We use an exisitng policy AmazonRDSEnhancedMonitoringRole
 resource "aws_iam_role" "rds_monitoring_role" {
   count = var.enhanced_monitoring_enabled ? 1 : 0
-  name               = "${var.db_name}-monitoring-role"
+  name               = "${var.db_name}-terraform-monitoring-role"
   assume_role_policy = data.aws_iam_policy_document.rds_monitoring_role_assume_role_policy.json
   managed_policy_arns = [
     "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
@@ -275,7 +295,7 @@ resource "aws_iam_role" "rds_monitoring_role" {
 
 # Create a SNS Topic
 resource "aws_sns_topic" "rds_db2_sns_topic" {
-  name              = "rds-db2-sns-topic"
+  name              = "rds-db2-terraform-sns-topic"
   kms_master_key_id = aws_kms_key.key_rds_db2.arn
 }
 
@@ -289,7 +309,7 @@ resource "aws_sns_topic_subscription" "rds_db2_topic_subscription" {
 # RDS Event subscription for database events 
 resource "aws_db_event_subscription" "rds_events_subscription" {
   depends_on = [aws_db_instance.rdsdb2]
-  name      = "rds-events-subscription"
+  name      = "rds-db2-terraform-events-subscription"
   sns_topic = aws_sns_topic.rds_db2_sns_topic.arn
 
   source_type = "db-instance"
@@ -312,7 +332,7 @@ resource "aws_db_event_subscription" "rds_events_subscription" {
 
 # RDS Event subscription for parameter group configuration changes
 resource "aws_db_event_subscription" "rds_events_subscription_parameters" {
-  name      = "rds-events-subscription-parameters"
+  name      = "rds-db2-terraform-parameters-events-subscription"
   sns_topic = aws_sns_topic.rds_db2_sns_topic.arn
 
   source_type = "db-parameter-group"
@@ -326,7 +346,7 @@ resource "aws_db_event_subscription" "rds_events_subscription_parameters" {
 
 # CloudWatch alarm for high CPU usage
 resource "aws_cloudwatch_metric_alarm" "rds_db2_high_cpu" {
-  alarm_name                = "rds-db2-high-cpu"
+  alarm_name                = "rds-db2-terraform-high-cpu-alarm"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = "3"
   metric_name               = "CPUUtilization"
@@ -345,7 +365,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_high_cpu" {
 
 # Setting up a filter to capture 'Level: Severe' messages in diaglog
 resource "aws_cloudwatch_log_metric_filter" "rds_db2_severe_log_filter" {
-  name           = "rds-db2-severe-log-filter"
+  name           = "rds-db2-terraform-severe-log-filter"
   pattern        = "\"LEVEL: Severe\""
   log_group_name = "/aws/rds/instance/${aws_db_instance.rdsdb2.identifier}/diag.log"
 
@@ -358,7 +378,7 @@ resource "aws_cloudwatch_log_metric_filter" "rds_db2_severe_log_filter" {
 
 # Setting up CloudWatch Alarm for 'Level: Severe' messages in diaglog
 resource "aws_cloudwatch_metric_alarm" "rds_db2_severe_log_alarm" {
-  alarm_name                = "rds-db2-severe-log-alarm"
+  alarm_name                = "rds-db2-terraform-severe-log-alarm"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
   evaluation_periods        = "1"
   metric_name               = "RDS-DB2-Severe-Log-Count"
