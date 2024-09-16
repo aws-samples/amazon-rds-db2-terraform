@@ -1,4 +1,4 @@
-identifier              = "rds-db2-terraform"
+identifier              = "rds-db2-terraform-test"
 aws_region              = "us-east-2"
 instance_class          = "db.t3.medium"
 allocated_storage       = 400

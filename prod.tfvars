@@ -1,4 +1,4 @@
-identifier              = "my-db2-instance"
+identifier              = "rds-db2-terraform-prod"
 aws_region              = "us-east-2"
 instance_class          = "db.r6i.xlarge"
 allocated_storage       = 400
