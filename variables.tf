@@ -152,3 +152,18 @@ variable "backup_retention" {
   description = "Specifies the days to retain backups between 7 and 31"
   type        = number
 }
+
+variable "delete_automated_backups" {
+  description = "Retain automated backups on deletion"
+  type        = bool
+}
+
+variable "deletion_protection" {
+  description = "Enable deletion protection"
+  type        = bool
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on deletion"
+  type        = bool
+}

@@ -8,7 +8,7 @@ data "aws_caller_identity" "current" {}
 
 # Define a custom DB parameter group for DB2
 resource "aws_db_parameter_group" "db2_param_group" {
-  name   = "db2-rds-params"
+  name   = "rds-db2-terraform-parametergroup"
   family = var.family
 
   # Set specific parameters for the DB2 instance
@@ -102,6 +102,11 @@ resource "aws_kms_key" "key_rds_db2" {
   tags                    = var.tags
 }
 
+resource "aws_kms_alias" "rds_db2_kms_key_alias" {
+  name          = "alias/rds-db2-terraform-kms-key"
+  target_key_id = aws_kms_key.key_rds_db2.key_id
+}
+
 # # Define the KMS key policy for the RDS KMS key and grant permissions to user
 resource "aws_kms_key_policy" "key_rds_db2_policy" {
   key_id = aws_kms_key.key_rds_db2.id
@@ -192,9 +197,9 @@ resource "aws_db_instance" "rdsdb2" {
   backup_retention_period = var.backup_retention  # Days to retain backups
   backup_window           = var.backup_window # Backup window in UTC
   copy_tags_to_snapshot   = true  # Copy tags to snapshots
-  skip_final_snapshot     = true  # Skip final snapshot on deletion
+  skip_final_snapshot     = var.skip_final_snapshot  # Skip final snapshot on deletion
   final_snapshot_identifier = "Db2-RDS-${var.identifier}-final-snaphot" # Identifier for final snapshot
-  delete_automated_backups = false # Retain automated backups on deletion
+  delete_automated_backups = var.delete_automated_backups # Retain automated backups on deletion
 
   # Monitoring and logging configuration
   #performance_insights_enabled = false # Disable Performance Insights, not available
@@ -207,7 +212,7 @@ resource "aws_db_instance" "rdsdb2" {
   parameter_group_name      = aws_db_parameter_group.db2_param_group.name # Parameter group name
   option_group_name         = aws_db_option_group.Db2_option_group.name # Option group name
 
-  deletion_protection       = true  # Enable deletion protection
+  deletion_protection       = var.deletion_protection  # Enable deletion protection
   maintenance_window        = var.maintenance_window # Preferred maintenance window in UTC
   apply_immediately         = true  # Apply changes immediately
   tags                      = var.tags # Apply tags
