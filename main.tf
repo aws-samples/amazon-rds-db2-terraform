@@ -107,7 +107,7 @@ resource "aws_kms_alias" "rds_db2_kms_key_alias" {
   target_key_id = aws_kms_key.key_rds_db2.key_id
 }
 
-# # Define the KMS key policy for the RDS KMS key and grant permissions to user
+# Define the KMS key policy for the RDS KMS key and grant permissions to user
 resource "aws_kms_key_policy" "key_rds_db2_policy" {
   key_id = aws_kms_key.key_rds_db2.id
   policy = jsonencode({
@@ -115,46 +115,26 @@ resource "aws_kms_key_policy" "key_rds_db2_policy" {
     Id      = "key-default-1"
     Statement = [
       {
-        Sid    = "Enable IAM User Permissions"
+        Sid    = "Give all permissions on key to root account"
         Effect = "Allow"
         Principal = {
           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        },
+        }
         Action   = "kms:*"
-        Resource = "*"
+        Resource = aws_kms_key.key_rds_db2.arn
+      },
+      {
+        Sid    = "Allow use of the key for the template initiator"
+        Effect = "Allow"
+        Principal = {
+          AWS = data.aws_caller_identity.current.arn
+        }
+        Action   = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey", "kms:GenerateDataKeyWithoutPlaintext"]
+        Resource = aws_kms_key.key_rds_db2.arn
       }
     ]
   })
 }
-
-# # Define the KMS key policy for the RDS KMS key and grant permissions to user
-# resource "aws_kms_key_policy" "key_rds_db2_policy" {
-#   key_id = aws_kms_key.key_rds_db2.id
-#   policy = jsonencode({
-#     Version = "2012-10-17"
-#     Id      = "key-default-1"
-#     Statement = [
-#       {
-#         Sid    = "Give all permissions on key to root account"
-#         Effect = "Allow"
-#         Principal = {
-#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-#         },
-#         Action   = "kms:*"
-#         Resource = aws_kms_key.key_rds_db2.arn
-#       },
-#       {
-#         Sid    = "Allow use of the key"
-#         Effect = "Allow"
-#         Principal = {
-#           AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:${data.aws_caller_identity.current.user_id}"
-#         },
-#         Action   = ["kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey", "kms:GenerateDataKeyWithoutPlaintext"]
-#         Resource = aws_kms_key.key_rds_db2.arn
-#       }
-#     ]
-#   })
-# }
 
 # Define the AWS RDS DB instance resource
 resource "aws_db_instance" "rdsdb2" {
