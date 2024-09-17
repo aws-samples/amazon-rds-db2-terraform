@@ -397,14 +397,14 @@ resource "aws_cloudwatch_metric_alarm" "rds_db2_severe_log_alarm" {
   treat_missing_data        = "notBreaching"
 }
 
-# Outputs to display key information after deployment
-output "db_instance_endpoint" {
-  description = "The connection endpoint"
-  value       = try(aws_db_instance.rdsdb2.endpoint, null)
-}
+# # Outputs to display key information after deployment
+# output "db_instance_endpoint" {
+#   description = "The connection endpoint"
+#   value       = try(aws_db_instance.rdsdb2.endpoint, null)
+# }
 
-output "db_instance_master_user_secret_arn" {
-  description = "The ARN of the master user secret"
-  value       = try(aws_db_instance.rdsdb2.master_user_secret[0].secret_arn, null)
-}
+# output "db_instance_master_user_secret_arn" {
+#   description = "The ARN of the master user secret"
+#   value       = try(aws_db_instance.rdsdb2.master_user_secret[0].secret_arn, null)
+# }
 
